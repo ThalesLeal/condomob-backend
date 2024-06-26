@@ -1,45 +1,30 @@
 from rest_framework.decorators import action
-from rest_framework_tracking.mixins import LoggingMixin
-from rest_framework import viewsets, permissions
-from core.models import Documento
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from core.serializers import DocumentoSerializer
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets
+from rest_framework_tracking.mixins import LoggingMixin
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework import permissions
 from django.utils import timezone
 from django.http import HttpResponse
-
-import hashlib
-import logging
+from core.models import Documento
+from core.serializers import DocumentoSerializer
 import pandas as pd
 import json
-
-
-logger = logging.getLogger(__name__)
 
 class DocumentoViewSet(LoggingMixin, viewsets.ModelViewSet):
     queryset = Documento.objects.all()
     serializer_class = DocumentoSerializer
-    authentication_classes = [
-        JWTAuthentication,
-        SessionAuthentication,
-        BasicAuthentication,
-    ]
+    authentication_classes = [JWTAuthentication, SessionAuthentication, BasicAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def create(self, request):
         file = request.FILES.get('documento')
+        if not file or not file.name.endswith('.csv'):
+            return Response({'error': 'Nenhum arquivo CSV foi enviado'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if file is None:
-            return Response({'error': 'Nenhum arquivo foi enviado'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not file.name.endswith('.csv'):
-            return Response({'error': 'Arquivo não é do tipo CSV'}, status=status.HTTP_400_BAD_REQUEST)
-        
         try:
             data = pd.read_csv(file, delimiter=',', encoding='utf-8')
-            
             columns = [
                 'ID_CONDOMINIO', 'ID_UNIDADE', 'VENCIMENTO', 'DATA_DE_COMPETENCIA', 
                 'CONTA_BANCARIA', 'NOSSO_NUMERO', 'TOKEN-FACILITADOR', 'TOKEN-CONTA',
@@ -60,7 +45,6 @@ class DocumentoViewSet(LoggingMixin, viewsets.ModelViewSet):
                 'RECEITA_APROPRIACAO15[CONTA_CATEGORIA]', 'RECEITA_APROPRIACAO15[COMPLEMENTO]', 'RECEITA_APROPRIACAO15[VALOR]',
                 'TAXA_DE_JUROS', 'TAXA_DE_MULTA', 'TAXA_DE_DESCONTO', 'COBRANCA_EXTRAORDINARIA'
             ]
-            
             final_df = pd.DataFrame(columns=columns)
             grouped = data.groupby('ID_VALIDACAO')
 
@@ -86,44 +70,47 @@ class DocumentoViewSet(LoggingMixin, viewsets.ModelViewSet):
                 return pd.Series(row)
 
             combined_rows = [combine_rows(group) for _, group in grouped]
-            final_df = pd.concat([final_df, pd.DataFrame(combined_rows)], ignore_index=True)
-            final_df = final_df.where(pd.notnull(final_df), '')
-           
-            records = final_df.to_dict(orient='records')
-            data_json = json.dumps(records, ensure_ascii=False)
-
-            file.seek(0)
-            file_content = file.read()
-            hashed_data = hashlib.sha256(file_content).hexdigest()
-
-            user = request.user
+            final_df = pd.concat([final_df, pd.DataFrame(combined_rows)], ignore_index=True).where(pd.notnull(final_df), '')
+            final_df = final_df[columns]  # Garantir que a sequência das colunas esteja correta
 
             Documento.objects.create(
-                dados=json.loads(data_json),
+                dados=json.loads(final_df.to_json(orient='records')),
                 data_gerado=timezone.now(),
-                usuario=user
+                usuario=request.user.username  # Certifique-se de que isso está correto
             )
             
-            return Response({'message': 'Dados do CSV salvos como JSON no ArquivoHash'}, status=status.HTTP_201_CREATED)
+            return Response({'message': 'Dados do CSV salvos com sucesso'}, status=status.HTTP_201_CREATED)
         
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=["post"])
+    @action(detail=False, methods=["post"], url_path='segunda_via')
     def segunda_via(self, request):
         arquivo_id = request.data.get('id_arquivo')
         
         try:
             documento = Documento.objects.get(id=arquivo_id)
-        
             df = pd.DataFrame(documento.dados)
             response = HttpResponse(content_type='text/csv')
             response['Content-Disposition'] = f'attachment; filename="dados_arquivo_{arquivo_id}.csv"'
             df.to_csv(path_or_buf=response, index=False, sep=',')
-            
             return response
-        
         except Documento.DoesNotExist:
             return Response({'error': 'Documento não encontrado'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["get"], url_path='visualizar')
+    def visualizar(self, request):
+        arquivo_id = request.query_params.get('id_arquivo')
+        
+        try:
+            print(f"Visualizando dados para o documento ID: {arquivo_id}")  # Adicione este log
+            documento = Documento.objects.get(id=arquivo_id)
+            return Response(documento.dados, status=status.HTTP_200_OK)
+        except Documento.DoesNotExist:
+            print("Documento não encontrado")  # Adicione este log
+            return Response({'error': 'Documento não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(f"Erro ao carregar os dados do documento: {e}")  # Adicione este log
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
