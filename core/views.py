@@ -13,7 +13,7 @@ import pandas as pd
 import json
 
 class DocumentoViewSet(LoggingMixin, viewsets.ModelViewSet):
-    queryset = Documento.objects.all()
+    queryset = Documento.objects.all().order_by('-data_gerado')  # Ordena por data_gerado em ordem decrescente
     serializer_class = DocumentoSerializer
     authentication_classes = [JWTAuthentication, SessionAuthentication, BasicAuthentication]
     permission_classes = [permissions.IsAuthenticated]
@@ -76,7 +76,7 @@ class DocumentoViewSet(LoggingMixin, viewsets.ModelViewSet):
             Documento.objects.create(
                 dados=json.loads(final_df.to_json(orient='records')),
                 data_gerado=timezone.now(),
-                usuario=request.user.username  # Certifique-se de que isso está correto
+                usuario=request.user
             )
             
             return Response({'message': 'Dados do CSV salvos com sucesso'}, status=status.HTTP_201_CREATED)
@@ -105,12 +105,12 @@ class DocumentoViewSet(LoggingMixin, viewsets.ModelViewSet):
         arquivo_id = request.query_params.get('id_arquivo')
         
         try:
-            print(f"Visualizando dados para o documento ID: {arquivo_id}")  # Adicione este log
+            print(f"Visualizando dados para o documento ID: {arquivo_id}")
             documento = Documento.objects.get(id=arquivo_id)
             return Response(documento.dados, status=status.HTTP_200_OK)
         except Documento.DoesNotExist:
-            print("Documento não encontrado")  # Adicione este log
+            print("Documento não encontrado")
             return Response({'error': 'Documento não encontrado'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            print(f"Erro ao carregar os dados do documento: {e}")  # Adicione este log
+            print(f"Erro ao carregar os dados do documento: {e}")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

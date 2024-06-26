@@ -19,22 +19,18 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework import routers
-from rest_framework_simplejwt.views import (TokenObtainPairView,
-                                            TokenRefreshView)
-
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from auth.views import UserInfoView
 from core import views
 
 router = routers.DefaultRouter()
-router.register(r"documento", views.DocumentoViewSet, basename='arquivo')
+router.register(r'documento', views.DocumentoViewSet, basename='documento')
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("api-auth/", include("rest_framework.urls")),
-    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("api/user-info/", UserInfoView.as_view(), name="user_info"),
- #  path('rest-auth/google/', include('allauth.socialaccount.urls')),
-   # path('accounts/', include('allauth.urls')),
-    path("api/", include(router.urls)),
+    path('admin/', admin.site.urls),
+    path('api-auth/', include('rest_framework.urls')),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/user-info/', UserInfoView.as_view(), name='user_info'),
+    path('api/', include(router.urls)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
