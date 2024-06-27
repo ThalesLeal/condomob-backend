@@ -23,14 +23,15 @@ Recomendamos o uso de um ambiente virtual para isolar as dependências do projet
 
 \`\`\`
 
-# Instale o virtualenv, se ainda não estiver instalado
+# Instale o virtualenv
 pip install virtualenv
 
 # Crie um ambiente virtual (substitua 'venv' pelo nome que você desejar)
  python -m venv env
 
 # Ativo o ambiente virtual
-source venv/bin/activate # no Windows use venv\Scripts\activate
+source venv/bin/activate 
+# no Windows use venv\Scripts\activate
 
 \`\`\`
 
