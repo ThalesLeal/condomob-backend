@@ -19,7 +19,6 @@ class DocumentoViewSet(LoggingMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def create(self, request):
-            import pdb; pdb.set_trace()
             file = request.FILES.get('documento')
 
             if file is None:
@@ -115,17 +114,13 @@ class DocumentoViewSet(LoggingMixin, viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=["get"], url_path='visualizar')
+    @action(detail=False, methods=['get'], url_path='visualizar')
     def visualizar(self, request):
         arquivo_id = request.query_params.get('id_arquivo')
-        
         try:
-            print(f"Visualizando dados para o documento ID: {arquivo_id}")
             documento = Documento.objects.get(id=arquivo_id)
             return Response(documento.dados, status=status.HTTP_200_OK)
         except Documento.DoesNotExist:
-            print("Documento não encontrado")
             return Response({'error': 'Documento não encontrado'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            print(f"Erro ao carregar os dados do documento: {e}")
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
