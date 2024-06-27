@@ -52,5 +52,5 @@ Aplicar Migrações do Banco de Dados: python manage.py migrate
 Executando o Servidor de Desenvolvimento
 Para iniciar o servidor de desenvolvimento do Django: python manage.py runserver
 
-#OBS.: A anexação do arquivo depende do front-end que esta em outro repositorio
+OBS.: A anexação do arquivo depende do front-end que esta em outro repositorio
 \`\`\`
