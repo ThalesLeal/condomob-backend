@@ -31,7 +31,7 @@ pip install virtualenv
 
 # Ativo o ambiente virtual
 source venv/bin/activate 
-# no Windows use venv\Scripts\activate
+no Windows use venv\Scripts\activate
 
 \`\`\`
 
