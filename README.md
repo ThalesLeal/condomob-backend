@@ -23,7 +23,7 @@ Recomendamos o uso de um ambiente virtual para isolar as dependências do projet
 
 \`\`\`
 
-Instale o virtualenv, se ainda não estiver instalado
+# Instale o virtualenv, se ainda não estiver instalado
 pip install virtualenv
 
 # Crie um ambiente virtual (substitua 'venv' pelo nome que você desejar)
